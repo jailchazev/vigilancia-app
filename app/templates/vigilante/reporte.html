@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+  <h3>Datos del Vigilante</h3>
+  <p><strong>Nombre:</strong> {{ current_user.nombre }}</p>
+  <p><strong>Unidad:</strong> {{ current_user.unidad.nombre }}</p>
+  <p><strong>Puesto:</strong> {{ current_user.puesto.nombre }}</p>
+  <p><strong>Turno:</strong> {{ 'Día' if (intervalo.hour >= 7 and intervalo.hour < 19) else 'Noche' }}</p>
+  <p><strong>Hora actual:</strong> <span id="hora-actual"></span></p>
+  <p><strong>Intervalo actual:</strong> {{ intervalo.strftime('%H:%M') }} - {{ (intervalo.replace(minute=intervalo.minute+30)).strftime('%H:%M') }}</p>
+  <p><strong>Ubicación:</strong> <span id="ubicacion">Obteniendo...</span></p>
+</div>
+
+<div class="botones">
+  <button id="btn-ok" class="btn-ok">✅ OK - Todo en orden</button>
+  <button id="btn-alerta" class="btn-alerta">⚠️ Alerta - Sospecha en la zona</button>
+</div>
+
+<button id="btn-emergencia" class="btn-emergencia">EMERGENCIA</button>
+
+<div id="mensaje"></div>
+
+<script src="{{ url_for('static', filename='js/geolocation.js') }}"></script>
+<script>
+  let ubicacion = null;
+  getCurrentLocation().then(pos => {
+    ubicacion = pos;
+    document.getElementById('ubicacion').textContent = `${pos.lat.toFixed(4)}, ${pos.lon.toFixed(4)}`;
+  }).catch(err => {
+    document.getElementById('ubicacion').textContent = 'No disponible';
+  });
+
+  function enviarReporte(tipo) {
+    if (!ubicacion) {
+      alert('Ubicación no disponible. Permita el acceso.');
+      return;
+    }
+    fetch('/enviar_reporte', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        tipo: tipo,
+        lat: ubicacion.lat,
+        lon: ubicacion.lon
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      let msg = '';
+      if (tipo === 'ok') msg = '✅ Reporte OK enviado';
+      else if (tipo === 'alerta') msg = '⚠️ Alerta registrada';
+      else if (tipo === 'emergencia') msg = '🆘 ¡EMERGENCIA ENVIADA!';
+      document.getElementById('mensaje').innerHTML = `<div class="alert-success">${msg}</div>`;
+    });
+  }
+
+  document.getElementById('btn-ok').addEventListener('click', () => enviarReporte('ok'));
+  document.getElementById('btn-alerta').addEventListener('click', () => enviarReporte('alerta'));
+  document.getElementById('btn-emergencia').addEventListener('click', () => enviarReporte('emergencia'));
+
+  // Actualizar hora
+  setInterval(() => {
+    const now = new Date();
+    document.getElementById('hora-actual').textContent = now.toLocaleTimeString('es-PE');
+  }, 1000);
+</script>
+{% endblock %}

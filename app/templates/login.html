@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="login-container">
+  <h2>Iniciar Sesión</h2>
+  <form method="POST">
+    <label>Código de Usuario</label>
+    <input type="text" name="codigo" required>
+
+    <label>Unidad Operativa</label>
+    <select name="unidad" id="unidad" required>
+      <option value="">Seleccionar</option>
+      {% for u in unidades %}
+        <option value="{{ u.id }}">{{ u.nombre }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Puesto</label>
+    <select name="puesto" id="puesto" required disabled>
+      <option value="">Seleccionar unidad primero</option>
+    </select>
+
+    <button type="submit">Ingresar</button>
+  </form>
+</div>
+
+<script>
+  document.getElementById('unidad').addEventListener('change', function() {
+    const unidadId = this.value;
+    const puestoSelect = document.getElementById('puesto');
+    puestoSelect.innerHTML = '<option>Cargando...</option>';
+    puestoSelect.disabled = true;
+
+    if (unidadId) {
+      fetch(`/api/puestos/${unidadId}`)
+        .then(res => res.json())
+        .then(data => {
+          puestoSelect.innerHTML = '';
+          data.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.nombre;
+            puestoSelect.appendChild(opt);
+          });
+          puestoSelect.disabled = false;
+        });
+    }
+  });
+</script>
+{% endblock %}
